@@ -1,6 +1,7 @@
 module ArabicLetterConnector
 
   @@charinfos = nil
+  @@diacritics = nil
 
   class CharacterInfo
 
@@ -43,19 +44,38 @@ module ArabicLetterConnector
     end
   end
 
+  # Checks to see if the final character is a diacritic. If so, previous character
+  # is given either the final or isolated form, depending on whether the character
+  # that came before it connects.
+  def self.check_for_final_diacritic(res, before_previous_char, previous_char, current_char, next_char)
+    # If the string is not empty, previous character is Arabic, the next character
+    # is nil or non-Arabic, and the current character is a diacritic, the previous
+    # character should be formatted as a final.
+    if res[-1] && charinfos.keys.include?(previous_char) && @@diacritics.include?(current_char) && !charinfos.keys.include?(next_char)
+      charinfos = self.charinfos
+      form = charinfos.keys.include?(before_previous_char) &&
+        charinfos[before_previous_char].connects? ? :final : :isolated
+      res[-1] = charinfos[previous_char].formatted[form]
+    end
+    return res
+  end
+
   def self.transform(str)
     res = ""
     charinfos = self.charinfos
+    before_previous_char = nil
     previous_char = nil
     current_char = nil
     next_char = nil
     str = self.replace_lam_alef(str)
     consume_character = lambda do |char|
+      before_previous_char = previous_char
       previous_char = current_char
       current_char = next_char
       next_char = char
       return unless current_char
       if charinfos.keys.include?(current_char)
+        res = self.check_for_final_diacritic(res, before_previous_char, previous_char, current_char, next_char)
         form = determine_form(previous_char, next_char)
         res += charinfos[current_char].formatted[form]
       else
@@ -175,7 +195,7 @@ module ArabicLetterConnector
     #
     # List of Diacritics pulled from http://unicode.org/charts/PDF/U0600.pdf
     # under the heading "Tashkil from ISO 8859-6"
-    [
+    @@diacritics = [
       "064b", # FATHATAN
       "064c", # DAMMATAN
       "064D", # KASRATAN
@@ -184,7 +204,8 @@ module ArabicLetterConnector
       "0650", # KASRA
       "0651", # SHADDA
       "0652"  # SUKUN
-    ].each do |codepoint|
+    ]
+    @@diacritics.each do |codepoint|
       add(codepoint, codepoint, codepoint, codepoint, codepoint, true)
     end
 
