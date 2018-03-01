@@ -48,11 +48,11 @@ module ArabicLetterConnector
   # is given either the final or isolated form, depending on whether the character
   # that came before it connects.
   def self.check_for_final_diacritic(res, before_previous_char, previous_char, current_char, next_char)
+    charinfos = self.charinfos
     # If the string is not empty, previous character is Arabic, the next character
     # is nil or non-Arabic, and the current character is a diacritic, the previous
     # character should be formatted as a final.
-    if res[-1] && charinfos.keys.include?(previous_char) && @@diacritics.include?(current_char) && !charinfos.keys.include?(next_char)
-      charinfos = self.charinfos
+    if res[-1] && charinfos.keys.include?(previous_char) && @@diacritics.keys.include?(current_char) && !charinfos.keys.include?(next_char)
       form = charinfos.keys.include?(before_previous_char) &&
         charinfos[before_previous_char].connects? ? :final : :isolated
       res[-1] = charinfos[previous_char].formatted[form]
@@ -195,7 +195,8 @@ module ArabicLetterConnector
     #
     # List of Diacritics pulled from http://unicode.org/charts/PDF/U0600.pdf
     # under the heading "Tashkil from ISO 8859-6"
-    @@diacritics = [
+    @@diacritics = {}
+    [
       "064b", # FATHATAN
       "064c", # DAMMATAN
       "064D", # KASRATAN
@@ -204,9 +205,8 @@ module ArabicLetterConnector
       "0650", # KASRA
       "0651", # SHADDA
       "0652"  # SUKUN
-    ]
-    @@diacritics.each do |codepoint|
-      add(codepoint, codepoint, codepoint, codepoint, codepoint, true)
+    ].each do |codepoint|
+      add(codepoint, codepoint, codepoint, codepoint, codepoint, true, true)
     end
 
     # The common codes for these four Lam-Alef characters are in the
@@ -219,7 +219,7 @@ module ArabicLetterConnector
     @@charinfos
   end
 
-  def self.add(common, isolated, final, initial, medial, connects)
+  def self.add(common, isolated, final, initial, medial, connects, diacritic = false)
     charinfo = CharacterInfo.new(
       [common.hex].pack("U"),
       [isolated.hex].pack("U"),
@@ -229,6 +229,7 @@ module ArabicLetterConnector
       connects
     )
     @@charinfos[charinfo.common] = charinfo
+    @@diacritics[charinfo.common] = charinfo if diacritic
   end
 
 end
